@@ -14,7 +14,8 @@ import {
   Truck,
   BarChart3,
   Plus,
-  Ship
+  Ship,
+  Bell
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -94,6 +95,27 @@ export default function DashboardPage() {
       icon: Ship,
       color: 'bg-indigo-500',
       href: '/shipments'
+    },
+    {
+      title: 'จัดการ Shipper',
+      description: 'ข้อมูลผู้ส่งสินค้า',
+      icon: Truck,
+      color: 'bg-red-500',
+      href: '/shippers'
+    },
+    {
+      title: 'จัดการ Consignee',
+      description: 'ข้อมูลผู้รับสินค้า',
+      icon: Users,
+      color: 'bg-blue-500',
+      href: '/consignees'
+    },
+    {
+      title: 'จัดการ Notify Party',
+      description: 'ข้อมูลผู้แจ้งการขนส่ง',
+      icon: Bell,
+      color: 'bg-yellow-500',
+      href: '/notify-parties'
     }
   ]
 
@@ -144,7 +166,7 @@ export default function DashboardPage() {
           <h3 className="text-xl font-semibold text-gray-900 mb-4">
             การดำเนินการด่วน
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {quickActions.map((action, index) => (
               <Link key={index} href={action.href}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">

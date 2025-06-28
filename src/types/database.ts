@@ -232,4 +232,93 @@ export interface ShipmentFormData {
   temperature_setting?: number
   humidity_setting?: number
   tracking_notes?: string
+  shipper_id?: string
+  consignee_id?: string
+  notify_party_id?: string
+}
+
+// Shipping Parties Interfaces
+export interface Shipper {
+  id: string
+  shipper_code: string
+  company_name: string
+  address: string
+  phone?: string
+  fax?: string
+  status: 'active' | 'inactive'
+  notes?: string
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Consignee {
+  id: string
+  consignee_code: string
+  company_name: string
+  address: string
+  phone?: string
+  fax?: string
+  email?: string
+  usci?: string
+  contact_person?: string
+  status: 'active' | 'inactive'
+  notes?: string
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface NotifyParty {
+  id: string
+  notify_code: string
+  company_name: string
+  address: string
+  phone?: string
+  fax?: string
+  email?: string
+  usci?: string
+  contact_person?: string
+  status: 'active' | 'inactive'
+  notes?: string
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
+
+// Form Data Types
+export interface ShipperFormData {
+  shipper_code: string
+  company_name: string
+  address: string
+  phone?: string
+  fax?: string
+  status: 'active' | 'inactive'
+  notes?: string
+}
+
+export interface ConsigneeFormData {
+  consignee_code: string
+  company_name: string
+  address: string
+  phone?: string
+  fax?: string
+  email?: string
+  usci?: string
+  contact_person?: string
+  status: 'active' | 'inactive'
+  notes?: string
+}
+
+export interface NotifyPartyFormData {
+  notify_code: string
+  company_name: string
+  address: string
+  phone?: string
+  fax?: string
+  email?: string
+  usci?: string
+  contact_person?: string
+  status: 'active' | 'inactive'
+  notes?: string
 }
