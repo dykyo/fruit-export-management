@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Plus, Search, Edit, Eye, Bell, Phone, MapPin, Mail, X, User } from 'lucide-react'
 import { NotifyParty, NotifyPartyFormData } from '@/types/database'
+import { notifyPartyApi } from '@/lib/api/shipping-parties'
 
 export default function NotifyPartiesPage() {
   const [notifyParties, setNotifyParties] = useState<NotifyParty[]>([])
@@ -29,59 +30,26 @@ export default function NotifyPartiesPage() {
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
-  // Mock data for demonstration
+  // Load notify parties from database
   useEffect(() => {
-    setTimeout(() => {
-      setNotifyParties([
-        {
-          id: '1',
-          notify_code: 'NOT001',
-          company_name: 'BEIJING JUNYAO INTERNATIONAL',
-          address: 'COURTYARD 2, JIAOGEZHUANG STREET NANFAXIN TOWN, SHUNYI DISTRICT, BEIJING, CHINA, 101300.',
-          phone: '0086-13911653846',
-          fax: '0086-13911653846',
-          email: 'docs.list@bjncei.com, gm@bjncei.com',
-          usci: '91110113MA003ATG6P',
-          contact_person: 'Ms.Lv Huibin',
-          status: 'active',
-          notes: 'Same as consignee',
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01'
-        },
-        {
-          id: '2',
-          notify_code: 'NOT002',
-          company_name: 'CHINA CUSTOMS BROKER',
-          address: 'ROOM 888, BUILDING C, NO.500 CUSTOMS ROAD, PUDONG NEW AREA, SHANGHAI, CHINA, 201204',
-          phone: '0086-21-6666-8888',
-          fax: '0086-21-6666-8889',
-          email: 'customs@chinacb.com, notify@chinacb.com',
-          usci: '91310115MA1FL3XQ5Y',
-          contact_person: 'Mr.Li Ming',
-          status: 'active',
-          notes: 'Customs clearance agent',
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01'
-        },
-        {
-          id: '3',
-          notify_code: 'NOT003',
-          company_name: 'SINGAPORE LOGISTICS HUB',
-          address: '456 TANJONG PAGAR ROAD, #08-12 PSA BUILDING, SINGAPORE 088381',
-          phone: '+65-6789-0123',
-          fax: '+65-6789-0124',
-          email: 'notify@sglogistics.com, ops@sglogistics.com',
-          usci: '201987654K',
-          contact_person: 'Ms.Lim Hui Ling',
-          status: 'active',
-          notes: 'Logistics coordination',
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01'
-        }
-      ])
-      setLoading(false)
-    }, 1000)
+    loadNotifyParties()
   }, [])
+
+  const loadNotifyParties = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await notifyPartyApi.getAll()
+      if (error) {
+        console.error('Error loading notify parties:', error)
+      } else {
+        setNotifyParties(data || [])
+      }
+    } catch (error) {
+      console.error('Error loading notify parties:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredNotifyParties = notifyParties.filter(notifyParty => {
     const matchesSearch = notifyParty.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,11 +88,36 @@ export default function NotifyPartiesPage() {
       return
     }
 
-    // TODO: Submit to API
-    console.log('Submitting notify party data:', formData)
-    
-    // Reset form
-    resetForm()
+    try {
+      if (editingNotifyParty) {
+        // Update existing notify party
+        const { error } = await notifyPartyApi.update(editingNotifyParty.id, formData)
+        if (error) {
+          console.error('Error updating notify party:', error)
+          setFormErrors({ submit: 'เกิดข้อผิดพลาดในการแก้ไขข้อมูล' })
+          return
+        }
+      } else {
+        // Create new notify party
+        const { error } = await notifyPartyApi.create(formData)
+        if (error) {
+          console.error('Error creating notify party:', error)
+          if (error.code === '23505') {
+            setFormErrors({ notify_code: 'รหัส Notify Party นี้มีอยู่แล้ว' })
+          } else {
+            setFormErrors({ submit: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' })
+          }
+          return
+        }
+      }
+
+      // Reload data and reset form
+      await loadNotifyParties()
+      resetForm()
+    } catch (error) {
+      console.error('Error submitting notify party:', error)
+      setFormErrors({ submit: 'เกิดข้อผิดพลาดในการเชื่อมต่อ' })
+    }
   }
 
   const resetForm = () => {
@@ -433,6 +426,12 @@ export default function NotifyPartiesPage() {
                       rows={2}
                     />
                   </div>
+
+                  {formErrors.submit && (
+                    <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                      {formErrors.submit}
+                    </div>
+                  )}
 
                   <div className="flex justify-end space-x-4 pt-6 border-t">
                     <Button

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Plus, Search, Edit, Eye, Users, Phone, MapPin, Mail, X, User } from 'lucide-react'
 import { Consignee, ConsigneeFormData } from '@/types/database'
+import { consigneeApi } from '@/lib/api/shipping-parties'
 
 export default function ConsigneesPage() {
   const [consignees, setConsignees] = useState<Consignee[]>([])
@@ -29,59 +30,26 @@ export default function ConsigneesPage() {
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
-  // Mock data for demonstration
+  // Load consignees from database
   useEffect(() => {
-    setTimeout(() => {
-      setConsignees([
-        {
-          id: '1',
-          consignee_code: 'CON001',
-          company_name: 'BEIJING JUNYAO INTERNATIONAL',
-          address: 'COURTYARD 2, JIAOGEZHUANG STREET NANFAXIN TOWN, SHUNYI DISTRICT, BEIJING, CHINA, 101300.',
-          phone: '0086-13911653846',
-          fax: '0086-13911653846',
-          email: 'docs.list@bjncei.com, gm@bjncei.com',
-          usci: '91110113MA003ATG6P',
-          contact_person: 'Ms.Lv Huibin',
-          status: 'active',
-          notes: 'Major importer in Beijing',
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01'
-        },
-        {
-          id: '2',
-          consignee_code: 'CON002',
-          company_name: 'SHANGHAI FRESH IMPORT LTD.',
-          address: 'ROOM 1205, BUILDING A, NO.1000 JINHAI ROAD, PUDONG NEW AREA, SHANGHAI, CHINA, 201206',
-          phone: '0086-21-5888-9999',
-          fax: '0086-21-5888-9998',
-          email: 'import@shfresh.com, manager@shfresh.com',
-          usci: '91310115MA1FL2XQ4X',
-          contact_person: 'Mr.Wang Lei',
-          status: 'active',
-          notes: 'Shanghai based importer',
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01'
-        },
-        {
-          id: '3',
-          consignee_code: 'CON004',
-          company_name: 'SINGAPORE FRESH MART PTE LTD',
-          address: '123 ORCHARD ROAD, #12-34 ORCHARD PLAZA, SINGAPORE 238874',
-          phone: '+65-6123-4567',
-          fax: '+65-6123-4568',
-          email: 'orders@sgfreshmart.com, admin@sgfreshmart.com',
-          usci: '201234567H',
-          contact_person: 'Mr.Tan Wei Ming',
-          status: 'active',
-          notes: 'Singapore retail chain',
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01'
-        }
-      ])
-      setLoading(false)
-    }, 1000)
+    loadConsignees()
   }, [])
+
+  const loadConsignees = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await consigneeApi.getAll()
+      if (error) {
+        console.error('Error loading consignees:', error)
+      } else {
+        setConsignees(data || [])
+      }
+    } catch (error) {
+      console.error('Error loading consignees:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredConsignees = consignees.filter(consignee => {
     const matchesSearch = consignee.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,11 +88,36 @@ export default function ConsigneesPage() {
       return
     }
 
-    // TODO: Submit to API
-    console.log('Submitting consignee data:', formData)
-    
-    // Reset form
-    resetForm()
+    try {
+      if (editingConsignee) {
+        // Update existing consignee
+        const { error } = await consigneeApi.update(editingConsignee.id, formData)
+        if (error) {
+          console.error('Error updating consignee:', error)
+          setFormErrors({ submit: 'เกิดข้อผิดพลาดในการแก้ไขข้อมูล' })
+          return
+        }
+      } else {
+        // Create new consignee
+        const { error } = await consigneeApi.create(formData)
+        if (error) {
+          console.error('Error creating consignee:', error)
+          if (error.code === '23505') {
+            setFormErrors({ consignee_code: 'รหัส Consignee นี้มีอยู่แล้ว' })
+          } else {
+            setFormErrors({ submit: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' })
+          }
+          return
+        }
+      }
+
+      // Reload data and reset form
+      await loadConsignees()
+      resetForm()
+    } catch (error) {
+      console.error('Error submitting consignee:', error)
+      setFormErrors({ submit: 'เกิดข้อผิดพลาดในการเชื่อมต่อ' })
+    }
   }
 
   const resetForm = () => {
@@ -433,6 +426,12 @@ export default function ConsigneesPage() {
                       rows={2}
                     />
                   </div>
+
+                  {formErrors.submit && (
+                    <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                      {formErrors.submit}
+                    </div>
+                  )}
 
                   <div className="flex justify-end space-x-4 pt-6 border-t">
                     <Button

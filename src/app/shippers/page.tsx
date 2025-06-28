@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Plus, Search, Edit, Eye, Truck, Phone, MapPin, X } from 'lucide-react'
 import { Shipper, ShipperFormData } from '@/types/database'
+import { shipperApi } from '@/lib/api/shipping-parties'
 
 export default function ShippersPage() {
   const [shippers, setShippers] = useState<Shipper[]>([])
@@ -26,50 +27,27 @@ export default function ShippersPage() {
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
-  // Mock data for demonstration
+  // Load shippers from database
   useEffect(() => {
-    setTimeout(() => {
-      setShippers([
-        {
-          id: '1',
-          shipper_code: 'SHP001',
-          company_name: 'DYY TRADING INTL CO., LTD.',
-          address: '101 MOO 7 WIANG SUBDISTRICT, CHIANGSAEN DISTRICT CHIANGRAI 57150 THAILAND',
-          phone: '053-650066',
-          fax: '053-650066',
-          status: 'active',
-          notes: 'Primary shipper for northern region',
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01'
-        },
-        {
-          id: '2',
-          shipper_code: 'SHP002',
-          company_name: 'THAI FRUIT EXPORT CO., LTD.',
-          address: '123 SILOM ROAD, BANGRAK DISTRICT, BANGKOK 10500 THAILAND',
-          phone: '02-234-5678',
-          fax: '02-234-5679',
-          status: 'active',
-          notes: 'Bangkok based fruit exporter',
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01'
-        },
-        {
-          id: '3',
-          shipper_code: 'SHP003',
-          company_name: 'GOLDEN HARVEST TRADING',
-          address: '456 CHAROENKRUNG ROAD, BANGRAK DISTRICT, BANGKOK 10500 THAILAND',
-          phone: '02-345-6789',
-          fax: '02-345-6790',
-          status: 'active',
-          notes: 'Specialized in tropical fruits',
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01'
-        }
-      ])
-      setLoading(false)
-    }, 1000)
+    loadShippers()
   }, [])
+
+  const loadShippers = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await shipperApi.getAll()
+      if (error) {
+        console.error('Error loading shippers:', error)
+        // You can add toast notification here
+      } else {
+        setShippers(data || [])
+      }
+    } catch (error) {
+      console.error('Error loading shippers:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredShippers = shippers.filter(shipper => {
     const matchesSearch = shipper.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -107,11 +85,36 @@ export default function ShippersPage() {
       return
     }
 
-    // TODO: Submit to API
-    console.log('Submitting shipper data:', formData)
-    
-    // Reset form
-    resetForm()
+    try {
+      if (editingShipper) {
+        // Update existing shipper
+        const { error } = await shipperApi.update(editingShipper.id, formData)
+        if (error) {
+          console.error('Error updating shipper:', error)
+          setFormErrors({ submit: 'เกิดข้อผิดพลาดในการแก้ไขข้อมูล' })
+          return
+        }
+      } else {
+        // Create new shipper
+        const { error } = await shipperApi.create(formData)
+        if (error) {
+          console.error('Error creating shipper:', error)
+          if (error.code === '23505') {
+            setFormErrors({ shipper_code: 'รหัส Shipper นี้มีอยู่แล้ว' })
+          } else {
+            setFormErrors({ submit: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' })
+          }
+          return
+        }
+      }
+
+      // Reload data and reset form
+      await loadShippers()
+      resetForm()
+    } catch (error) {
+      console.error('Error submitting shipper:', error)
+      setFormErrors({ submit: 'เกิดข้อผิดพลาดในการเชื่อมต่อ' })
+    }
   }
 
   const resetForm = () => {
@@ -381,6 +384,12 @@ export default function ShippersPage() {
                       rows={2}
                     />
                   </div>
+
+                  {formErrors.submit && (
+                    <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                      {formErrors.submit}
+                    </div>
+                  )}
 
                   <div className="flex justify-end space-x-4 pt-6 border-t">
                     <Button
